@@ -12,31 +12,31 @@
 #define sec PORTB
 #define min PORTC
 #define std PORTD
-#define TIMER_START 0
-#define STD_START 12
-#define MIN_START 35
+#define TIMER_START 0// vorlaeufig unrelevant
+#define STD_START 17 // hier muss die aktuelle Stunde eingetragen werden
+#define MIN_START 02 // hier muss die aktuelle Minute eingetragen werden
 
-char i = 0;
-char h = STD_START;
+char 	i = 0, // Interruptzaehler (nachteiler)
+		h = STD_START; // Hilfsvariable zum zwischenspeichern der Stunde
 
 
 int main(void)
 {
-	DDRB = 0xFF;						// PORTB = Ausgang = Sekunden
-	DDRC = 0xFF;						// PORTC = Ausgang = Minuten
-	DDRD = 0xFF;						// PORTD = Ausgang = Stunden
+	DDRB = 0xFF;	// PORTB = Ausgang = Sekunden
+	DDRC = 0xFF;	// PORTC = Ausgang = Minuten
+	DDRD = 0xFF;	// PORTD = Ausgang = Stunden
 
     //Timer0 (8Bit-Timer) initialiesiern
-	TCCR0 |= (1<<CS00) | (1<<CS02);		//Timer0
+	TCCR0 |= (1<<CS00) | (1<<CS02);		//Timer0 mit vorteiler 1024 starten
     TCNT0 = TIMER_START;	//Startwert des Timer0
     TIMSK |= (1<<TOIE0);	//interrupts erlauben
 
-    //Interrups ein
+    //generell Interrups einschalten
     sei();
 
     sec = 0;
     min = MIN_START;
-    std = STD_START;
+    std = h<<2; // da std (PORTD) von 2-7 geht muss die Ausgebe um 2 Stellen verschoben werden
 
     do {
     	//eventuell noch taster
@@ -51,11 +51,15 @@ int main(void)
     } while (1); // Mainloop
 }
 
+/*
+ * interruptroutine für Timer0
+ */
 ISR (TIMER0_OVF_vect)
 {
 	i++;
 	if(i>=20){
 		i = 0;
+
 		sec++;
 		if(sec >= 60){
 			sec = 0;
@@ -65,13 +69,13 @@ ISR (TIMER0_OVF_vect)
 		if(min>=60){
 			min = 0;
 			h++;
+			std = h<<2;
 		}
 
-		if(h>24){
+		if(h>=24){
 			h = 0;
+			std = 0;
 		}
-		char h1 = h;
-		h1 = h1<<2;
-		std = h1;
+
 	}
 }
